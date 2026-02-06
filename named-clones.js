@@ -1,22 +1,22 @@
 (function(Scratch) {
   'use strict';
 
+  if (!Scratch.extensions.unsandboxed) {
+    throw new Error('This extension must run unsandboxed');
+  }
+
   class NamedClones {
-    constructor() {
-      // Stockage des noms de clones par sprite
-      this.cloneNames = new WeakMap();
+    constructor(runtime) {
+      this.runtime = runtime;
+      // Stockage des noms de clones
+      this.cloneNames = new Map();
       this.cloneCounter = 0;
-      this.pendingCloneName = null;
     }
 
     getInfo() {
       return {
         id: 'namedclones',
-        name: {
-          'en': 'Named Clones',
-          'fr': 'Clones Nommés',
-          'es': 'Clones Nombrados'
-        },
+        name: 'Named Clones',
         color1: '#FFAB19',
         color2: '#EC9C13',
         color3: '#CF8B17',
@@ -24,11 +24,7 @@
           {
             opcode: 'whenIStartAsNamedClone',
             blockType: Scratch.BlockType.HAT,
-            text: {
-              'en': 'when I start as a clone named [NAME]',
-              'fr': 'quand je commence comme un clone nommé [NAME]',
-              'es': 'cuando empiezo como un clon llamado [NAME]'
-            },
+            text: 'when I start as a clone named [NAME]',
             isEdgeActivated: false,
             arguments: {
               NAME: {
@@ -40,16 +36,11 @@
           {
             opcode: 'createNamedCloneOf',
             blockType: Scratch.BlockType.COMMAND,
-            text: {
-              'en': 'create clone of [TARGET] named [NAME]',
-              'fr': 'créer un clone de [TARGET] nommé [NAME]',
-              'es': 'crear clon de [TARGET] llamado [NAME]'
-            },
+            text: 'create clone of [TARGET] named [NAME]',
             arguments: {
               TARGET: {
                 type: Scratch.ArgumentType.STRING,
-                menu: 'cloneTarget',
-                defaultValue: '_myself_'
+                menu: 'cloneTarget'
               },
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -61,20 +52,12 @@
           {
             opcode: 'myCloneName',
             blockType: Scratch.BlockType.REPORTER,
-            text: {
-              'en': 'my clone name',
-              'fr': 'mon nom de clone',
-              'es': 'mi nombre de clon'
-            }
+            text: 'my clone name'
           },
           {
             opcode: 'isCloneNamed',
             blockType: Scratch.BlockType.BOOLEAN,
-            text: {
-              'en': 'am I clone named [NAME]?',
-              'fr': 'suis-je le clone nommé [NAME] ?',
-              'es': 'soy el clon llamado [NAME]?'
-            },
+            text: 'am I clone named [NAME]?',
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -85,11 +68,7 @@
           {
             opcode: 'setMyCloneName',
             blockType: Scratch.BlockType.COMMAND,
-            text: {
-              'en': 'set my clone name to [NAME]',
-              'fr': 'mettre mon nom de clone à [NAME]',
-              'es': 'fijar mi nombre de clon a [NAME]'
-            },
+            text: 'set my clone name to [NAME]',
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -101,11 +80,7 @@
           {
             opcode: 'deleteNamedClones',
             blockType: Scratch.BlockType.COMMAND,
-            text: {
-              'en': 'delete all clones named [NAME]',
-              'fr': 'supprimer tous les clones nommés [NAME]',
-              'es': 'borrar todos los clones llamados [NAME]'
-            },
+            text: 'delete all clones named [NAME]',
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -116,11 +91,7 @@
           {
             opcode: 'countNamedClones',
             blockType: Scratch.BlockType.REPORTER,
-            text: {
-              'en': 'number of clones named [NAME]',
-              'fr': 'nombre de clones nommés [NAME]',
-              'es': 'número de clones llamados [NAME]'
-            },
+            text: 'number of clones named [NAME]',
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -131,11 +102,7 @@
           {
             opcode: 'cloneNamedExists',
             blockType: Scratch.BlockType.BOOLEAN,
-            text: {
-              'en': 'clone named [NAME] exists?',
-              'fr': 'le clone nommé [NAME] existe ?',
-              'es': 'el clon llamado [NAME] existe?'
-            },
+            text: 'clone named [NAME] exists?',
             arguments: {
               NAME: {
                 type: Scratch.ArgumentType.STRING,
@@ -147,20 +114,12 @@
           {
             opcode: 'getAllCloneNames',
             blockType: Scratch.BlockType.REPORTER,
-            text: {
-              'en': 'all clone names',
-              'fr': 'tous les noms de clones',
-              'es': 'todos los nombres de clones'
-            }
+            text: 'all clone names'
           },
           {
             opcode: 'setCloneData',
             blockType: Scratch.BlockType.COMMAND,
-            text: {
-              'en': 'set clone data [KEY] to [VALUE]',
-              'fr': 'mettre donnée clone [KEY] à [VALUE]',
-              'es': 'fijar dato clon [KEY] a [VALUE]'
-            },
+            text: 'set clone data [KEY] to [VALUE]',
             arguments: {
               KEY: {
                 type: Scratch.ArgumentType.STRING,
@@ -175,11 +134,7 @@
           {
             opcode: 'getCloneData',
             blockType: Scratch.BlockType.REPORTER,
-            text: {
-              'en': 'clone data [KEY]',
-              'fr': 'donnée clone [KEY]',
-              'es': 'dato clon [KEY]'
-            },
+            text: 'clone data [KEY]',
             arguments: {
               KEY: {
                 type: Scratch.ArgumentType.STRING,
@@ -191,29 +146,33 @@
         menus: {
           cloneTarget: {
             acceptReporters: true,
-            items: [
-              {
-                text: {
-                  'en': 'myself',
-                  'fr': 'moi-même',
-                  'es': 'yo mismo'
-                },
-                value: '_myself_'
-              }
-            ]
+            items: '_getTargets'
           }
         }
       };
+    }
+
+    _getTargets() {
+      const sprites = this.runtime.targets
+        .filter(target => target.isOriginal && !target.isStage)
+        .map(target => target.getName());
+      
+      if (sprites.length === 0) {
+        return [''];
+      }
+      
+      return ['_myself_', ...sprites];
     }
 
     whenIStartAsNamedClone(args, util) {
       const expectedName = String(args.NAME);
       const target = util.target;
       
-      // Vérifier si c'est un clone et s'il a le bon nom
+      // Vérifier si c'est un clone
       if (!target.isOriginal) {
-        if (this.cloneNames.has(target)) {
-          const cloneData = this.cloneNames.get(target);
+        const targetId = target.id;
+        if (this.cloneNames.has(targetId)) {
+          const cloneData = this.cloneNames.get(targetId);
           return cloneData.name === expectedName;
         }
       }
@@ -227,50 +186,48 @@
       
       // Gérer "myself"
       if (targetName === '_myself_') {
-        targetName = util.target.sprite.name;
+        const sprite = util.target.sprite;
+        const clone = sprite.clones[0].makeClone();
+        
+        if (clone) {
+          this.cloneNames.set(clone.id, {
+            name: name,
+            data: {},
+            id: ++this.cloneCounter
+          });
+        }
+        return;
       }
       
-      // Stocker le nom pour le prochain clone créé
-      this.pendingCloneName = name;
-      
       // Trouver le sprite cible
-      const stage = util.target.runtime.getTargetForStage();
-      const targets = stage ? [stage, ...stage.runtime.targets] : util.target.runtime.targets;
-      
+      const targets = this.runtime.targets;
       let targetSprite = null;
+      
       for (const target of targets) {
-        if (target.sprite && target.sprite.name === targetName && target.isOriginal) {
+        if (target.isOriginal && !target.isStage && target.sprite.name === targetName) {
           targetSprite = target;
           break;
         }
       }
       
-      if (!targetSprite) {
-        // Si pas trouvé, utiliser le sprite actuel
-        targetSprite = util.target;
-      }
-      
-      // Créer le clone
-      const clone = targetSprite.makeClone();
-      
-      if (clone) {
-        // Assigner le nom au clone
-        this.cloneNames.set(clone, {
-          name: name,
-          data: {},
-          id: ++this.cloneCounter
-        });
-        
-        // Réinitialiser le nom en attente
-        this.pendingCloneName = null;
+      if (targetSprite) {
+        const clone = targetSprite.makeClone();
+        if (clone) {
+          this.cloneNames.set(clone.id, {
+            name: name,
+            data: {},
+            id: ++this.cloneCounter
+          });
+        }
       }
     }
 
     myCloneName(args, util) {
       const target = util.target;
+      const targetId = target.id;
       
-      if (this.cloneNames.has(target)) {
-        return this.cloneNames.get(target).name;
+      if (this.cloneNames.has(targetId)) {
+        return this.cloneNames.get(targetId).name;
       }
       
       return '';
@@ -279,9 +236,10 @@
     isCloneNamed(args, util) {
       const name = String(args.NAME);
       const target = util.target;
+      const targetId = target.id;
       
-      if (this.cloneNames.has(target)) {
-        return this.cloneNames.get(target).name === name;
+      if (this.cloneNames.has(targetId)) {
+        return this.cloneNames.get(targetId).name === name;
       }
       
       return false;
@@ -290,31 +248,30 @@
     setMyCloneName(args, util) {
       const name = String(args.NAME);
       const target = util.target;
+      const targetId = target.id;
       
-      if (!this.cloneNames.has(target)) {
-        this.cloneNames.set(target, {
+      if (!this.cloneNames.has(targetId)) {
+        this.cloneNames.set(targetId, {
           name: name,
           data: {},
           id: ++this.cloneCounter
         });
       } else {
-        const cloneData = this.cloneNames.get(target);
+        const cloneData = this.cloneNames.get(targetId);
         cloneData.name = name;
       }
     }
 
     deleteNamedClones(args, util) {
       const name = String(args.NAME);
-      const runtime = util.target.runtime;
-      
-      // Parcourir tous les sprites
-      const targets = runtime.targets.slice();
+      const targets = this.runtime.targets.slice();
       
       for (const target of targets) {
-        if (!target.isOriginal && this.cloneNames.has(target)) {
-          const cloneData = this.cloneNames.get(target);
+        if (!target.isOriginal && this.cloneNames.has(target.id)) {
+          const cloneData = this.cloneNames.get(target.id);
           if (cloneData.name === name) {
-            runtime.disposeTarget(target);
+            this.runtime.disposeTarget(target);
+            this.cloneNames.delete(target.id);
           }
         }
       }
@@ -322,12 +279,11 @@
 
     countNamedClones(args, util) {
       const name = String(args.NAME);
-      const runtime = util.target.runtime;
       let count = 0;
       
-      for (const target of runtime.targets) {
-        if (!target.isOriginal && this.cloneNames.has(target)) {
-          const cloneData = this.cloneNames.get(target);
+      for (const target of this.runtime.targets) {
+        if (!target.isOriginal && this.cloneNames.has(target.id)) {
+          const cloneData = this.cloneNames.get(target.id);
           if (cloneData.name === name) {
             count++;
           }
@@ -339,11 +295,10 @@
 
     cloneNamedExists(args, util) {
       const name = String(args.NAME);
-      const runtime = util.target.runtime;
       
-      for (const target of runtime.targets) {
-        if (!target.isOriginal && this.cloneNames.has(target)) {
-          const cloneData = this.cloneNames.get(target);
+      for (const target of this.runtime.targets) {
+        if (!target.isOriginal && this.cloneNames.has(target.id)) {
+          const cloneData = this.cloneNames.get(target.id);
           if (cloneData.name === name) {
             return true;
           }
@@ -354,12 +309,11 @@
     }
 
     getAllCloneNames(args, util) {
-      const runtime = util.target.runtime;
       const names = new Set();
       
-      for (const target of runtime.targets) {
-        if (!target.isOriginal && this.cloneNames.has(target)) {
-          const cloneData = this.cloneNames.get(target);
+      for (const target of this.runtime.targets) {
+        if (!target.isOriginal && this.cloneNames.has(target.id)) {
+          const cloneData = this.cloneNames.get(target.id);
           if (cloneData.name) {
             names.add(cloneData.name);
           }
@@ -373,25 +327,27 @@
       const key = String(args.KEY);
       const value = args.VALUE;
       const target = util.target;
+      const targetId = target.id;
       
-      if (!this.cloneNames.has(target)) {
-        this.cloneNames.set(target, {
+      if (!this.cloneNames.has(targetId)) {
+        this.cloneNames.set(targetId, {
           name: '',
           data: {},
           id: ++this.cloneCounter
         });
       }
       
-      const cloneData = this.cloneNames.get(target);
+      const cloneData = this.cloneNames.get(targetId);
       cloneData.data[key] = value;
     }
 
     getCloneData(args, util) {
       const key = String(args.KEY);
       const target = util.target;
+      const targetId = target.id;
       
-      if (this.cloneNames.has(target)) {
-        const cloneData = this.cloneNames.get(target);
+      if (this.cloneNames.has(targetId)) {
+        const cloneData = this.cloneNames.get(targetId);
         if (key in cloneData.data) {
           return cloneData.data[key];
         }
@@ -401,5 +357,5 @@
     }
   }
 
-  Scratch.extensions.register(new NamedClones());
+  Scratch.extensions.register(new NamedClones(Scratch.vm.runtime));
 })(Scratch);
